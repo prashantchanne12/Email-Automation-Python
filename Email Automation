@@ -1,0 +1,264 @@
+import smtplib
+import imapclient
+import pyzmail
+import getpass
+
+print('|-----------x-----------x-----------x-----------x-----------x---|')
+print('|                                                               |')
+print('|\t\t\tEmail Automation                        |')
+print('|                                                               |')
+print('|-----------x-----------x-----------x-----------x-----------x---|')
+
+smtpObj = None
+emailId = ""
+password = ""
+imapObj = None
+
+def connect_to_the_server():
+    #Establishing the connection
+    global smtpObj
+    smtpObj = smtplib.SMTP('smtp.gmail.com',587)
+
+    value,data = smtpObj.ehlo()
+
+    #Establishing the connection
+    smtpObj = smtplib.SMTP('smtp.gmail.com',587)
+
+    value,data = smtpObj.ehlo()
+
+    if value == 250:
+        print("\n\n****Connected Successfully!*****")
+    else:
+        print("\nSomething went wrong")
+
+
+def encrypt_connection():
+    #Enabling Encryption
+    value,data = smtpObj.starttls() #tls = transport layer security
+
+    if(value == 220):
+        print("*****Connection is Encrypted*****")
+    else:
+        print("Problem to Encrypt connection")
+
+
+def login():
+
+    global smtpObj,emailId,password
+    while True:
+
+        try:
+            emailId = input("\nEnter Your Email Address:  ")
+            password = getpass.getpass("Enter Your Password:  ")
+            smtpObj.login(emailId,password)
+
+        except:
+            print("\nPlease enter correct Email id and Password")
+            continue
+
+        else:
+            print("\n--------------------------------------------")
+            print("\tLogged in Successfully!!")
+            print("---------------------------------------------\n\n")
+            break
+
+
+def choose_options():
+    print('\t|----x----x----x----|')
+    print("\t|  Choose Option    |")
+    print('\t|----x----x----x----|')
+    print('\t|                   |')
+    print("\t|  1.Send Mail      |")
+    print("\t|  2.View Mail      |")
+    print("\t|  3.Log out        |")
+    print('\t|                   |')
+    print('\t|----x----x----x----|')
+    choice = int(input("\nEnter your choice:  "))
+    return choice
+
+
+
+def send_mail():
+        global smtpObj
+        while True:
+           
+            recipient = input("\nRecipient Email Id:  ")
+            subject = input("Subject:  ")
+            body = input("Body:  ")
+
+            confirm = int(input("\nPress 1 for confirm 0 for Edit:  "))
+
+            if(confirm==1):
+                smtpObj.sendmail(emailId,recipient,'Subject:'+subject+'\n'+body)
+                print("\n\n--------------------------------------------------------------------------------------------------------------")
+                print("\t\t\t\t          Message Send Successfully!!")
+                print('')
+                print('    From:  {} \t\t\t\t\tTo: {}'.format(emailId,recipient))
+                print("--------------------------------------------------------------------------------------------------------------\n\n")
+                break
+               
+            if(confirm==0):
+                continue
+               
+            else:
+                continue
+
+
+
+def connect_to_imap_server():
+        global emailId,password,imapObj
+        #connecting to imap server
+        imapObj = imapclient.IMAPClient('imap.gmail.com',ssl=True);
+
+        print("\n********Connected Successfully*******")
+
+
+        #Login
+        result = imapObj.login(emailId,password)
+
+        if('Success' in result.decode()):
+            print("\n********Logged in Successfully********\n\n")
+
+
+
+
+def select_folder():
+    print('\t|----x----x----x----|')
+    print("\t|  Select Folder    |")
+    print('\t|----x----x----x----|')
+    print('\t|                   |')
+    print("\t|  1.Inbox          |")
+    print("\t|  2.All Mail       |")
+    print("\t|  3.Sent Mail      |")
+    print("\t|  4.Spam           |")
+    print("\t|  5.Drafts         |")
+    print("\t|  5.Quit           |")
+    print('\t|                   |')
+    print('\t|----x----x----x----|')
+    num = int(input("\nEnter your choice:  "))
+    return num
+
+
+def no_of_messages(name,folder,imapObj):
+    #searching inside folder
+    uids = imapObj.search('ALL') #1 2 12 13 17
+    count = 0
+    count_msg = 1
+    mails = len(uids)       
+    print('\n|----------------------------------------------------------------|')
+    print('\tThere are {} messages in your {}             '.format(mails,name))
+    print('|----------------------------------------------------------------|\n')
+
+    show_messages(uids,count,count_msg,mails)
+
+
+def show_messages(uidss,counts,count_msgs,mailss):
+    global imapObj
+   
+    count = counts
+    uids = uidss
+    count_msg = count_msgs
+    mails = mailss
+
+    print('Hello '+emailId)
+    while(mails!=0):
+
+        print('\nEnter 1 to see Message {} and 0 to Quit  '.format(count_msg))
+        count_msg+=1
+        msg = int(input())
+
+        if(msg==1):
+            count=0
+            raw = imapObj.fetch(uids[count],['BODY[]'])
+            message = pyzmail.PyzMessage.factory(raw[uids[count]][b'BODY[]'])
+            uids.pop(0)
+            mails-=1
+
+            #subject = message.get_subject()
+            from_msg1,from_msg2 = message.get_address('from')
+            to_msg1,to_msg2 = message.get_address('to')
+            body = message.text_part.get_payload().decode(message.text_part.charset)
+            #body2 = message.html_part.get_payload().decode(message.html_part.charset)
+
+            print("\n\n-----------------------------------------------------------------------------------------------------------")
+            print("\t\t\t\t          Message!")
+            print('')
+            print('    From:  {} \t\t\t\t\tTo: {}'.format(from_msg1,to_msg1))
+            print("-----------------------------------------------------------------------------------------------------------\n\n")
+
+            print('\n-------------Body--------------\n')
+            print(body)
+
+            print('\n-------------Body--------------\n')
+            #print(body2)
+
+        else:
+            break
+
+        if(mails == 0):
+            print('You read all your messages!')
+
+
+
+connect_to_the_server()
+encrypt_connection()
+login()
+
+while True:
+    choice = choose_options()
+
+
+    if choice == 1:
+        send_mail()
+
+    if choice == 2:
+        connect_to_imap_server()
+        name=""
+        folder=""
+        num = select_folder()
+
+        if num==1:
+            folder = 'INBOX'
+            name = 'Inbox'
+            imapObj.select_folder(folder,readonly=True)
+            no_of_messages(name,folder,imapObj)
+           
+
+        elif num == 2:
+            folder = '[Gmail]/All Mail'
+            name = 'All Mails'
+            imapObj.select_folder(folder,readonly=True)
+            no_of_messages(name,folder,imapObj)
+           
+
+        elif num == 3:
+            folder = '[Gmail]/Sent Mail'
+            name = 'Sent Mails'
+            imapObj.select_folder(folder,readonly=True)
+            no_of_messages(name,folder,imapObj)
+           
+
+        elif num == 4:
+            folder = '[Gmail]/Spam'
+            name = 'Spam Mails'
+            imapObj.select_folder(folder,readonly=True)
+            no_of_messages(name,folder,imapObj)
+           
+
+        elif num == 5:
+            folder = '[Gmail]/Drafts'
+            names = 'Drafts Mails'
+            imapObj.select_folder(folder,readonly=True)
+            no_of_messages(name,folder,imapObj)
+           
+       
+        else:
+            break
+           
+    if choice == 3:
+        smtpObj.quit()          
+        print("\n--------------------------------------------")
+        print("\tLogged out Successfully!!")
+        print("---------------------------------------------\n\n")
+        break
+
